@@ -4,7 +4,7 @@
 */
 
 const express = require('express');
-const port = 443;
+const port = process.env.PORT || 4000;
 
 const server = express();
 
