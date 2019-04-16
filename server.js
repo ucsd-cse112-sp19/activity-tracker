@@ -14,15 +14,15 @@ server.get('/', (req, res) => {
     res.send('This is the server');
 });
 
-server.get('/hello-world', (req, res) => {
+server.post('/hello-world', (req, res) => {
     res.json({response:"Hello World"});
 });
 
-server.get('/date-time', (req, res) => {
+server.post('/date-time', (req, res) => {
     const now = new Date();
     res.json({date: now.toDateString(), time: now.toTimeString()});
 });
 
 server.listen(port, () => {
     console.log("Listening on port " + port);
-});
+});                                                                                                                                                                                             
