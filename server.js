@@ -12,7 +12,7 @@ const server = express();
 server.use(bodyParser.json());
 server.use(bodyParser.urlencoded({extended: true}));
 
-const good_user = ["Thomas Powell"];
+const good_user = ["Thomas Powell", "yiy142", "csynnott", "nonguyen","abehrman","bel060"];
 var startTime = new Date();
 var validString = '';
 var joinQR = '';
@@ -46,24 +46,32 @@ server.post('/gen', (req, res) => {
     //check user_name
     //console.log(good_user);
     console.log(good_user[0].valueOf());
+    var find = false;
 
-    if (! (req.body.user_name.valueOf() === good_user[0].valueOf())){
+    var i = 0;
+    for (i = 0; i < good_user.length; i ++){
+        if ((req.body.user_name.valueOf() === good_user[i].valueOf())){
+            find = true;
+            break;
+        }
+    }
+    if (!find){
         res.send("You are not authorized to generate this event");
         return;
     }
     
     startTime = new Date();
     //TODO
-    validString = 'randomString';
-    joinQR = 'randomQR';
+    validString = 'randomString TODO';
+    joinQR = 'randomQR TODO';
 
     res.json(
         {
+            "text": "Created Event!",
             "attachments": [
                 {
-                    "text": "Created Event!",
-                    "image_url": joinQR,
-                    "validString": validString
+                    "text":  "Valid String: " + validString,
+                    "image_url": joinQR
                 }
             ]
         }
