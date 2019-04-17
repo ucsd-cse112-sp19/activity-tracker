@@ -5,6 +5,8 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const https = require('https');
+const request = require('request');
 
 const port = process.env.PORT || 4000;
 const server = express();
@@ -136,6 +138,7 @@ server.post('/gen', (req, res) => {
 
 
 server.post('/attn', (req, res) => {
+    var now = new Date();
     /* check if time > 15 min*/
     var endTime   = new Date();
     var seconds = (endTime.getTime() - startTime.getTime())/1000;
@@ -147,41 +150,31 @@ server.post('/attn', (req, res) => {
     
     /* check if req.params.text == attn string */
     if (req.body.text.valueOf() === validString.valueOf()){
+        
+        var username = req.body.user_name;
+        var data = JSON.stringify( {
+            email: username + "@ucsd.edu",
+            source: "attendance",
+            description: "" + username + " checked into class on " +
+                now.toDateString() + " at " + now.toTimeString(),
+        });
 
-        // TODO(Remove api key from temp option)
-        let options = {
-            host: 'http://service.statushero.com',
-            path: '/api/v1/status_activities/',
+        // TODO(Nate): Remove api key from temp option
+        var options = {
+            uri: 'https://service.statushero.com/api/v1/status_activities',
+            body: data,
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-TEAM-ID': 'baf9ff98-508d-4550-939c-4dd8dd39a3b7',
-                'X-API-KEY': '0jPiMqxhxrBAm9Mp8JEUkgVM6_Mxve16hYnYmWxdgms', 
+                'Content-Type': 'application/json',
+                'X-TEAM-ID': 'cf075293-90db-400c-96c6-293351155144',
+                'X-API-KEY': 'FszdnpfeyksCmLyOimW273G7keVzbgtxnIBnY0BL4X8', 
             },
-            data: {
-                email: req.bodt.user)name + "@ucsd.edu",
-                source: "attendance for " + now.toDateString(),
-                description: "Checked into class at " + now.currentTime(),
-            }
         }
 
     	//res.send('successfully attended!');
-        const req = https.request(options, (res) => {
-            console.log(`statusCode: ${res.statusCode}`)
-        })
-        res.send("status code: " + res.statusCode);
-
-
-    	/* send post request to count data base with user_name in json format*/
-//    	const xhr = new XMLHttpRequest();
-//    	const url = 'attended-count.com';
-//        xhr.open("POST", url, true);
-//        //TEAM ID
-//        //USER NAME
-//        //API key
-//		xhr.setRequestHeader("Content-Type", "application/json");
-//		var data = JSON.stringify({"user_name": ""+req.params.user_name});
-//		xhr.send(data);
+        request(options, (err, result, body) => {
+            res.send("username" + username + "status code: " + body);
+        });
     }
     else{
     	res.send('wrong validation enter code!');
