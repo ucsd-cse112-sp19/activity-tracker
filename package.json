@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/ucsd-cse112/activity-tracker#readme",
   "dependencies": {
+    "body-parser": "^1.18.3",
     "express": "^4.16.4",
     "multer": "^1.4.1"
   }

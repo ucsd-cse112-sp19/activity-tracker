@@ -4,9 +4,13 @@
 */
 
 const express = require('express');
-const port = process.env.PORT || 4000;
+const bodyParser = require('body-parser');
 
+const port = process.env.PORT || 4000;
 const server = express();
+
+server.use(bodyParser.json());
+server.use(bodyParser.urlencoded({extended: true}));
 
 const good_user = ["Thomas Powell"];
 var startTime = new Date();
@@ -35,19 +39,15 @@ var upload = multer(); // for parsing multipart/form-data
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); 
 */
-server.post('/gen', upload.array(),(req, res, next) => {
+server.post('/gen', (req, res) => {
 
-
-	/* need some authencitation check.
-
-	const {body} = req.body;
-	console.log(req.body);
-	res.send(req.body);
-	*/
-
-	
+    /* need some authencitation check.*/
+    console.log(req.body.user_name.valueOf());
     //check user_name
-    if (! (req.params.user_id in good_user)){
+    //console.log(good_user);
+    console.log(good_user[0].valueOf());
+
+    if (! (req.body.user_name.valueOf() === good_user[0].valueOf())){
         res.send("You are not authorized to generate this event");
         return;
     }
@@ -69,12 +69,11 @@ server.post('/gen', upload.array(),(req, res, next) => {
         }
     );
     res.send('send QR Code and attn string');
-    
 });
 
 server.post('/attn', (req, res) => {
     /* check if time > 15 min*/
-    var endDate   = new Date();
+    var endTime   = new Date();
     var seconds = (endTime.getTime() - startTime.getTime())/1000;
     if (seconds >= 900){
     	res.send('Time out!');
@@ -88,7 +87,10 @@ server.post('/attn', (req, res) => {
     	/* ingore for now
     	const xhr = new XMLHttpRequest();
     	const url = 'attended-count.com';
-    	xhr.open("POST", url, true);
+        xhr.open("POST", url, true);
+        //TEAM ID
+        //USER NAME
+        //API key
 		xhr.setRequestHeader("Content-Type", "application/json");
 		var data = JSON.stringify({"user_name": ""+req.params.user_name});
 		xhr.send(data);
