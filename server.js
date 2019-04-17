@@ -11,12 +11,10 @@ const server = express();
 
 server.use(bodyParser.json());
 server.use(bodyParser.urlencoded({extended: true}));
-
 const good_user = ["Thomas Powell", "yiy142", "csynnott", "nonguyen","abehrman","bel060"];
 var startTime = new Date();
 var validString = '';
 var joinQR = '';
-
 
 server.get('/', (req, res) => {
     res.send('This is the server');
@@ -31,21 +29,77 @@ server.post('/date-time',  (req, res) => {
     res.json({date: now.toDateString(), time: now.toTimeString()});
 });
 
-/*
-var app = require('express')();
-var bodyParser = require('body-parser');
-var multer = require('multer'); // v1.0.5
-var upload = multer(); // for parsing multipart/form-data
-app.use(bodyParser.json()); // for parsing application/json
-app.use(bodyParser.urlencoded({ extended: true })); 
-*/
+
+/* -------------AUTHENTICATION -----------------------*/
+// This route handles get request to a /oauth endpoint. We'll use this endpoint for handling the logic of the Slack oAuth process behind our app.
+server.get('/oauth', function(req, res) {
+    // When a user authorizes an app, a code query parameter is passed on the oAuth endpoint. If that code is not there, we respond with an error message
+    if (!req.query.code) {
+        res.status(500);
+        res.send({"Error": "Looks like we're not getting code."});
+        console.log("Looks like we're not getting code.");
+    } else {
+        // If it's there...
+
+        // We'll do a GET call to Slack's `oauth.access` endpoint, passing our app's client ID, client secret, and the code we just got as query parameters.
+        request({
+            url: 'https://slack.com/api/oauth.access', //URL to hit
+            qs: {code: req.query.code, client_id: clientId, client_secret: clientSecret}, //Query string data
+            method: 'GET', //Specify the method
+
+        }, function (error, response, body) {
+            if (error) {
+                console.log(error);
+            } else {
+                res.json(body);
+
+            }
+        })
+    }
+});
+
+// Route the endpoint that our slash command will point to and send back a simple response to indicate that ngrok is working
+server.post('/command', function(req, res) {
+    res.send('Your ngrok tunnel is up and running!');
+});
+
+
+server.post('/getAllUsersEmails', function(req, res) {
+   request({
+      url: 'https://slack.com/api/users.profile.get', //URL to hit
+      qs: {token: token}, //Query string data
+      method: 'GET', //Specify the method
+
+   }, function (error, response, body) {
+         if (error) {
+            console.log(error);
+         } else {
+            bodyJson = JSON.parse(body);
+            res.send(bodyJson.profile.email);
+         }
+   })
+});
+
+/* -------------------SLACK COMMAND --------------------*/
+
+function randomkey(length)
+{
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
+    for (var i = 0; i<length; i++)
+    {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
 server.post('/gen', (req, res) => {
 
     /* need some authencitation check.*/
-    console.log(req.body.user_name.valueOf());
-    //check user_name
-    //console.log(good_user);
-    console.log(good_user[0].valueOf());
+
+    //console.log(req.body.user_name.valueOf());
+    //console.log(good_user[0].valueOf());
+
     var find = false;
 
     var i = 0;
@@ -62,8 +116,9 @@ server.post('/gen', (req, res) => {
     
     startTime = new Date();
     //TODO
-    validString = 'randomString TODO';
-    joinQR = 'randomQR TODO';
+    validString = randomkey(5);
+    console.log(validString);
+    joinQR = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1920px-QR_code_for_mobile_English_Wikipedia.svg.png';
 
     res.json(
         {
@@ -76,21 +131,24 @@ server.post('/gen', (req, res) => {
             ]
         }
     );
-    res.send('send QR Code and attn string');
+    //res.send('send QR Code and attn string');
 });
+
 
 server.post('/attn', (req, res) => {
     /* check if time > 15 min*/
     var endTime   = new Date();
     var seconds = (endTime.getTime() - startTime.getTime())/1000;
+    console.log("time pass: " + seconds);
     if (seconds >= 900){
     	res.send('Time out!');
     	return;
     }
     
     /* check if req.params.text == attn string */
-    if (req.params.text == validString){
+    if (req.body.text.valueOf() === validString.valueOf()){
     	res.send('successfully attended!');
+
     	/* send post request to count data base with user_name in json format*/
     	/* ingore for now
     	const xhr = new XMLHttpRequest();
