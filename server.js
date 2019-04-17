@@ -147,20 +147,41 @@ server.post('/attn', (req, res) => {
     
     /* check if req.params.text == attn string */
     if (req.body.text.valueOf() === validString.valueOf()){
-    	res.send('successfully attended!');
+
+        // TODO(Remove api key from temp option)
+        let options = {
+            host: 'http://service.statushero.com',
+            path: '/api/v1/status_activities/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-TEAM-ID': 'baf9ff98-508d-4550-939c-4dd8dd39a3b7',
+                'X-API-KEY': '0jPiMqxhxrBAm9Mp8JEUkgVM6_Mxve16hYnYmWxdgms', 
+            },
+            data: {
+                email: req.bodt.user)name + "@ucsd.edu",
+                source: "attendance for " + now.toDateString(),
+                description: "Checked into class at " + now.currentTime(),
+            }
+        }
+
+    	//res.send('successfully attended!');
+        const req = https.request(options, (res) => {
+            console.log(`statusCode: ${res.statusCode}`)
+        })
+        res.send("status code: " + res.statusCode);
+
 
     	/* send post request to count data base with user_name in json format*/
-    	/* ingore for now
-    	const xhr = new XMLHttpRequest();
-    	const url = 'attended-count.com';
-        xhr.open("POST", url, true);
-        //TEAM ID
-        //USER NAME
-        //API key
-		xhr.setRequestHeader("Content-Type", "application/json");
-		var data = JSON.stringify({"user_name": ""+req.params.user_name});
-		xhr.send(data);
-		*/
+//    	const xhr = new XMLHttpRequest();
+//    	const url = 'attended-count.com';
+//        xhr.open("POST", url, true);
+//        //TEAM ID
+//        //USER NAME
+//        //API key
+//		xhr.setRequestHeader("Content-Type", "application/json");
+//		var data = JSON.stringify({"user_name": ""+req.params.user_name});
+//		xhr.send(data);
     }
     else{
     	res.send('wrong validation enter code!');
