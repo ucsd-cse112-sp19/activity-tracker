@@ -13,7 +13,7 @@ const server = express();
 
 server.use(bodyParser.json());
 server.use(bodyParser.urlencoded({extended: true}));
-const good_user = ["Thomas Powell", "yiy142", "csynnott", "nonguyen","abehrman","bel060"];
+const good_user = ["Thomas Powell","rkeng", "yiy142", "csynnott", "nonguyen","abehrman","bel060"];
 var startTime = new Date();
 var validString = '';
 var joinQR = '';
