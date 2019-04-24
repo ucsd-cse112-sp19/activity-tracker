@@ -139,12 +139,12 @@ server.post('/gen', (req, res) => {
 /* -------------- (Start) Intercept modules  -------------- */
 // TODO(Nate): abstract modules into seperate class to preserve functionality
 // and proper interface.
-function checkTime(req) {
+function checkTime(req, res) {
     /* check if time > 15 min*/
-    var checkinTime = new Date();
-    var seconds = (checkinTime.getTime() - startTime.getTime()) / 1000;
-    var fifteenMinsInSeconds = 60 * 15
-    console.log("time pass: " + seconds);
+    const checkinTime = new Date();
+    const seconds = (checkinTime.getTime() - startTime.getTime()) / 1000;
+    console.debug("seconds passed since code generate: " + seconds);
+    const fifteenMinsInSeconds = 60 * 15
     if (seconds >= fifteenMinsInSeconds) {
         res.send('Sorry your code has already expired.');
         return false;
@@ -152,37 +152,38 @@ function checkTime(req) {
         return true;
     }
 }
-function checkCode(req) {
-    var userInput = req.body.text.split(' ');
-    var userEmail = userInput[0];
-    var code = userInput[1];
+function checkCode(req, res) {
+    const userInput = req.body.text.split(' ');
+    const userEmail = userInput[0];
+    const code = userInput[1];
     /* check if req.params.text == attn string */
     if (code === validString.valueOf()) {
         return true;
     } else {
+        res.send('Sorry your code does not match with the generated code');
         return false;
     }
 }
 /* -------------- (End) Intercept modules  -------------- */
 
 server.post('/attn', (req, res) => {
-    let now = new Date();
+    const now = new Date();
 
-    var userInput = req.body.text.split(' ');
+    const userInput = req.body.text.split(' ');
     if (userInput.length != 2) {
         res.send("Incorrect usage. Please check the command docs.");
     }
-    var intercepts = [checkTime, checkCode];
+    const intercepts = [checkTime, checkCode];
 
-    //if (intercepts.every((interceptFunc) => interceptFunc(req))) {
-    if (true) {
+    if (intercepts.every((interceptFunc) => interceptFunc(req, res))) {
+    //if (true) {
         // Parse text input
-        var userEmail = userInput[0];
-        var code = userInput[1];
-        var username = req.body.user_name;
+        const userEmail = userInput[0];
+        const code = userInput[1];
+        const username = req.body.user_name;
 
         // TODO(Nate): display local time rather than GMT time. But use GMT time to track on server.
-        var data = JSON.stringify({
+        const data = JSON.stringify({
             email: userEmail,
             source: "attendance",
             description: "" + username + " checked into class on " +
@@ -190,7 +191,7 @@ server.post('/attn', (req, res) => {
         });
 
         // TODO(Nate): Remove api key from temp option
-        var options = {
+        const options = {
             uri: 'https://service.statushero.com/api/v1/status_activities',
             body: data,
             method: 'POST',
@@ -208,15 +209,11 @@ server.post('/attn', (req, res) => {
         console.log("before newJob");
         newJob(options, username, res);
     }
-    else {
-        res.send('You entered the wrong validation code.');
-    }
-
 });
 
 function newJob(options, username, res) {
-    console.log("in newJob");
-    var job = jobs.create('new job', {
+    console.debug("in newJob");
+    const job = jobs.create('new job', {
         options: JSON.stringify(options),
         username: username,
         body: ""
@@ -224,44 +221,53 @@ function newJob(options, username, res) {
     });
 
     job
-        .on('complete', function () {
-            console.log('Job', job.id, 'with username', job.data.username, 'is done');
-            res.send("good: " + job.data.body);
-            //res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(job.data.body).url);
+        .on('complete', function (body) {
+            console.debug('Job', job.id, 'with username', job.data.username, 'is done');
+            res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(body).url);
         })
-        .on('failed', function () {
-            console.log('Job', job.id, 'with username', job.data.username, 'has failed');
+        .on('failed', function (err) {
+            console.debug('Job', job.id, 'with username', job.data.username, 'has failed');
+            console.error("Error with status code: " + err);
+            if (err == 422) {
+                res.send("Sorry we did not recognize your email address.");
+            } else {
+                res.send("There was an error with your request, please check your email and try again");
+            }
         })
 
-    job.save();
+    //job.attempts(3).save(); 
+    // We try at max 3 times to send a request? can add handler to stop early dependent on the error
+    job.save(); // We try at max 3 times to send a request.
 }
 
-jobs.process('new job', function (job, done) {
+// We have at most 10 jobs running at a given time.
+jobs.process('new job', 10, function (job, done) {
     /* carry out all the job function here */
-    console.log("in process");
-    handleRequest(job);
-    done && done();
+    console.debug("in process");
+    handleRequest(job, done); // Done is handles by the handleRequest func.
+    //done && done();
 });
 
-function handleRequest(job) {
-    console.log("in handleRequest");
+function handleRequest(job, done) {
+    console.debug("in handleRequest");
     let options = JSON.parse(job.data.options);
     // let username = job.data.username;
     // let res = job.data.res;
 
     request(options, (err, result, body) => {
-        console.log("in request");
+        console.debug("in request");
         let statusCode = result.statusCode;                                 
-        console.log(statusCode);
+        console.debug("statusCode: " + statusCode);
         if (statusCode != 201) {
-            // res.send("errors");
-            console.log('error');
+            console.error('error call to status hero');
+            done(new Error(statusCode));
         } else {
-            // res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(body).url);
-            // job.data.body = body;
-            console.log('success');
-            console.log(JSON.parse(body));
+            console.debug('success call to status hero');
+            console.debug(JSON.parse(body));
+            done(null, body); // Pass the body back if there was no error
         }  
+        // TOOD(Nate): Add a timeout here. If the request takes too long, we
+        // send back to user notification that the request might have been lost
     });
 }
 
@@ -271,5 +277,5 @@ function handleRequest(job) {
 
 
 server.listen(port, () => {
-    console.log("Listening on port " + port);
+    console.debug("Listening on port " + port);
 });
