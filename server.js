@@ -166,6 +166,7 @@ function checkCode(req) {
 /* -------------- (End) Intercept modules  -------------- */
 
 server.post('/attn', (req, res) => {
+    let now = new Date();
 
     var userInput = req.body.text.split(' ');
     if (userInput.length != 2) {
@@ -173,7 +174,8 @@ server.post('/attn', (req, res) => {
     }
     var intercepts = [checkTime, checkCode];
 
-    if (intercepts.every((interceptFunc) => interceptFunc(req))) {
+    //if (intercepts.every((interceptFunc) => interceptFunc(req))) {
+    if (true) {
         // Parse text input
         var userEmail = userInput[0];
         var code = userInput[1];
@@ -200,9 +202,10 @@ server.post('/attn', (req, res) => {
         }
 
         // TODO(Nate): send to worker queue.
-        // request(options, (err, result, body) => {
-        //     res.send("username " + username + "status code: " + body);
-        // });
+        //request(options, (err, result, body) => {
+        //    res.send("username " + username + "status code: " + body);
+        //});
+        console.log("before newJob");
         newJob(options, username, res);
     }
     else {
@@ -212,15 +215,19 @@ server.post('/attn', (req, res) => {
 });
 
 function newJob(options, username, res) {
+    console.log("in newJob");
     var job = jobs.create('new job', {
-        options: options,
+        options: JSON.stringify(options),
         username: username,
-        res: res
+        body: ""
+        // res: res
     });
 
     job
         .on('complete', function () {
             console.log('Job', job.id, 'with username', job.data.username, 'is done');
+            res.send("good: " + job.data.body);
+            //res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(job.data.body).url);
         })
         .on('failed', function () {
             console.log('Job', job.id, 'with username', job.data.username, 'has failed');
@@ -231,22 +238,29 @@ function newJob(options, username, res) {
 
 jobs.process('new job', function (job, done) {
     /* carry out all the job function here */
+    console.log("in process");
     handleRequest(job);
     done && done();
 });
 
 function handleRequest(job) {
-    let options = job.data.options;
-    let username = job.data.username;
-    let res = job.data.res;
+    console.log("in handleRequest");
+    let options = JSON.parse(job.data.options);
+    // let username = job.data.username;
+    // let res = job.data.res;
 
     request(options, (err, result, body) => {
+        console.log("in request");
         let statusCode = result.statusCode;                                 
         console.log(statusCode);
         if (statusCode != 201) {
-            res.send("errors");
+            // res.send("errors");
+            console.log('error');
         } else {
-            res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(body).url);
+            // res.send("Great! " + username + ", you just checked in.\n" + JSON.parse(body).url);
+            // job.data.body = body;
+            console.log('success');
+            console.log(JSON.parse(body));
         }  
     });
 }
