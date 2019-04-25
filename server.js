@@ -111,6 +111,7 @@ server.post('/attn', (req, res) => {
     const userInput = req.body.text.split(' ');
     if (userInput.length != 2) {
         res.send("Incorrect usage. Please check the command docs.");
+        return;
     }
     const intercepts = [checkTime, checkCode];
 
