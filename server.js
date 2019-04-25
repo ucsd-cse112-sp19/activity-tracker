@@ -1,6 +1,7 @@
 /*
-    Before executing the server, please run "npm install" to fetch all the required packages to run the server
-    To run server, execute the command "npm start"
+    Before executing the server, please run "npm install" to fetch all the
+    required packages to run the server To run server, execute the command
+    "npm start"
 */
 
 const express = require('express');
@@ -20,68 +21,9 @@ var validString = '';
 var joinQR = '';
 let jobs = kue.createQueue(); // queue
 
-server.get('/', (req, res) => {
-    res.send('This is the server');
-});
-
-server.post('/hello-world', (req, res) => {
-    res.json({ response: "Hello World" });
-});
-
 server.post('/date-time', (req, res) => {
     const now = new Date();
     res.json({ date: now.toDateString(), time: now.toTimeString() });
-});
-
-
-/* -------------AUTHENTICATION -----------------------*/
-// This route handles get request to a /oauth endpoint. We'll use this endpoint for handling the logic of the Slack oAuth process behind our app.
-server.get('/oauth', function (req, res) {
-    // When a user authorizes an app, a code query parameter is passed on the oAuth endpoint. If that code is not there, we respond with an error message
-    if (!req.query.code) {
-        res.status(500);
-        res.send({ "Error": "Looks like we're not getting code." });
-        console.log("Looks like we're not getting code.");
-    } else {
-        // If it's there...
-
-        // We'll do a GET call to Slack's `oauth.access` endpoint, passing our app's client ID, client secret, and the code we just got as query parameters.
-        request({
-            url: 'https://slack.com/api/oauth.access', //URL to hit
-            qs: { code: req.query.code, client_id: clientId, client_secret: clientSecret }, //Query string data
-            method: 'GET', //Specify the method
-
-        }, function (error, response, body) {
-            if (error) {
-                console.log(error);
-            } else {
-                res.json(body);
-
-            }
-        })
-    }
-});
-
-// Route the endpoint that our slash command will point to and send back a simple response to indicate that ngrok is working
-server.post('/command', function (req, res) {
-    res.send('Your ngrok tunnel is up and running!');
-});
-
-
-server.post('/getAllUsersEmails', function (req, res) {
-    request({
-        url: 'https://slack.com/api/users.profile.get', //URL to hit
-        qs: { token: token }, //Query string data
-        method: 'GET', //Specify the method
-
-    }, function (error, response, body) {
-        if (error) {
-            console.log(error);
-        } else {
-            bodyJson = JSON.parse(body);
-            res.send(bodyJson.profile.email);
-        }
-    })
 });
 
 /* -------------------SLACK COMMAND --------------------*/
@@ -98,10 +40,6 @@ function randomkey(length) {
 server.post('/gen', (req, res) => {
 
     /* need some authencitation check.*/
-
-    //console.log(req.body.user_name.valueOf());
-    //console.log(good_user[0].valueOf());
-
     var find = false;
 
     var i = 0;
@@ -116,8 +54,10 @@ server.post('/gen', (req, res) => {
         return;
     }
 
+    // TODO(Nate): Add functionallity for own QR code generation here if desired.
+    // Currently a dummy QR value.
+
     startTime = new Date();
-    //TODO
     validString = randomkey(5);
     console.log(validString);
     joinQR = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1920px-QR_code_for_mobile_English_Wikipedia.svg.png';
@@ -133,7 +73,6 @@ server.post('/gen', (req, res) => {
             ]
         }
     );
-    //res.send('send QR Code and attn string');
 });
 
 /* -------------- (Start) Intercept modules  -------------- */
@@ -176,7 +115,6 @@ server.post('/attn', (req, res) => {
     const intercepts = [checkTime, checkCode];
 
     if (intercepts.every((interceptFunc) => interceptFunc(req, res))) {
-    //if (true) {
         // Parse text input
         const userEmail = userInput[0];
         const code = userInput[1];
@@ -187,7 +125,8 @@ server.post('/attn', (req, res) => {
             email: userEmail,
             source: "attendance",
             description: "" + username + " checked into class on " +
-                now.toLocaleDateString() + " at " + now.toLocaleTimeString(),
+                now.toLocaleDateString('en-US', {timeZone: 'America/Los_Angeles'}) + 
+                " at " + now.toLocaleTimeString('en-US', {timeZone: 'America/Los_Angeles'})
         });
 
         // TODO(Nate): Remove api key from temp option
@@ -198,14 +137,9 @@ server.post('/attn', (req, res) => {
             headers: {
                 'Content-Type': 'application/json',
                 'X-TEAM-ID': 'cf075293-90db-400c-96c6-293351155144',
-                'X-API-KEY': 'FszdnpfeyksCmLyOimW273G7keVzbgtxnIBnY0BL4X8',
+                'X-API-KEY': 'FszdnpfeyksCmLyOimW273G7keVzbgtxnIBnY0BL4X8'
             },
         }
-
-        // TODO(Nate): send to worker queue.
-        //request(options, (err, result, body) => {
-        //    res.send("username " + username + "status code: " + body);
-        //});
         console.log("before newJob");
         newJob(options, username, res);
     }
@@ -217,7 +151,6 @@ function newJob(options, username, res) {
         options: JSON.stringify(options),
         username: username,
         body: ""
-        // res: res
     });
 
     job
@@ -235,9 +168,7 @@ function newJob(options, username, res) {
             }
         })
 
-    //job.attempts(3).save(); 
-    // We try at max 3 times to send a request? can add handler to stop early dependent on the error
-    job.save(); // We try at max 3 times to send a request.
+    job.save(); 
 }
 
 // We have at most 10 jobs running at a given time.
@@ -245,14 +176,11 @@ jobs.process('new job', 10, function (job, done) {
     /* carry out all the job function here */
     console.debug("in process");
     handleRequest(job, done); // Done is handles by the handleRequest func.
-    //done && done();
 });
 
 function handleRequest(job, done) {
     console.debug("in handleRequest");
     let options = JSON.parse(job.data.options);
-    // let username = job.data.username;
-    // let res = job.data.res;
 
     request(options, (err, result, body) => {
         console.debug("in request");
@@ -270,11 +198,6 @@ function handleRequest(job, done) {
         // send back to user notification that the request might have been lost
     });
 }
-
-// setInterval(function () {
-//     newJob('Send_Email');
-// }, 3000);
-
 
 server.listen(port, () => {
     console.debug("Listening on port " + port);
